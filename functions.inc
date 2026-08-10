@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.1                                                    |
+// | analytics plugin 1.1.2                                                    |
 // +---------------------------------------------------------------------------+
 // | functions.inc                                                             |
 // |                                                                           |
@@ -42,7 +42,7 @@ if (strpos(strtolower($_SERVER['PHP_SELF']), 'functions.inc') !== false) {
 }
 
 $pi_name    = 'analytics';
-$_AN_CONF['version'] = '1.1.1';
+$_AN_CONF['version'] = '1.1.2';
 
 // database table names 
 $_TABLES['analytics']               = $_DB_table_prefix . 'analytics';
@@ -221,7 +221,7 @@ function plugin_upgrade_analytics()
     
     // Initialize configuration for the new version
     require_once $_CONF['path'] . 'plugins/analytics/install_updates.php';
-    analytics_update_ConfValues_1_1_1();
+    analytics_update_ConfValues_1_1_2();
     
     // Migrate old config to new config system if the table exists
     $table_exists = DB_query("SHOW TABLES LIKE '{$old_table}'");
@@ -237,7 +237,7 @@ function plugin_upgrade_analytics()
         DB_query("DROP TABLE {$old_table}");
     }
 
-    DB_query("UPDATE {$_TABLES['plugins']} SET pi_version='{$_AN_CONF['version']}',pi_homepage='http://www.geeklog.fr',pi_gl_version='2.2.2' WHERE pi_name='analytics' LIMIT 1");
+    DB_query("UPDATE {$_TABLES['plugins']} SET pi_version='{$_AN_CONF['version']}',pi_homepage='https://github.com/Geeklog-Plugins/analytics',pi_gl_version='2.1.1' WHERE pi_name='analytics' LIMIT 1");
     return true;
 }
 

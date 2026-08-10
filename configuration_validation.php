@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.1                                                    |
+// | analytics plugin 1.1.2                                                    |
 // +---------------------------------------------------------------------------+
 // | configuration_validation.php                                              |
 // |                                                                           |
@@ -38,7 +38,7 @@ if (stripos($_SERVER['PHP_SELF'], basename(__FILE__)) !== false) {
 // Analytics Settings
 // Both ga_code and client_id are strings, so we don't strictly need 
 // numeric/boolean validation, but this file is provided for completeness
-// and future extensibility as per Geeklog 2.2.2 standards.
+// and future extensibility.
 
 // Example of how we might validate ga_code if we wanted to enforce a pattern:
 // $_CONF_VALIDATE['analytics']['ga_code'] = array('rule' => 'notEmpty');

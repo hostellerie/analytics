@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.1                                                    |
+// | analytics plugin 1.1.2                                                    |
 // +---------------------------------------------------------------------------+
 // | autoinstall.php                                                           |
 // |                                                                           |
@@ -53,9 +53,9 @@ function plugin_autoinstall_analytics($pi_name)
     $info = array(
         'pi_name'         => $pi_name,
         'pi_display_name' => $pi_display_name,
-        'pi_version'      => '1.1.1',
-        'pi_gl_version'   => '2.2.2',
-        'pi_homepage'     => 'http://www.geeklog.fr/'
+        'pi_version'      => '1.1.2',
+        'pi_gl_version'   => '2.1.1',
+        'pi_homepage'     => 'https://github.com/Geeklog-Plugins/analytics'
     );
 
     $groups = array(

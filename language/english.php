@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.1                                                    |
+// | analytics plugin 1.1.2                                                    |
 // +---------------------------------------------------------------------------+
 // | language/english.php                                                      |
 // |                                                                           |
@@ -40,7 +40,7 @@ $LANG_analytics00 = array(
 	'preinstall_check'  => 'analytics has the following requirements:',
 	'geeklog_check'     => 'Geeklog v1.5.0 or greater, version reported is <b>%s</b>.',
     'php_check'         => 'PHP v4.3.0 or greater, version reported is <b>%s</b>.',
-    'preinstall_confirm' => "For full details on analytics Plugin, please visit <a href=\"http://www.geeklog.fr/cms/wiki/doku.php/plugins:analytics\" target=\"_blank\">www.geeklog.fr</a>.",
+    'preinstall_confirm' => "For full details on analytics Plugin, please visit <a href=\"https://github.com/Geeklog-Plugins/analytics\" target=\"_blank\">GitHub</a>.",
 );
 
 // Language for plugin users

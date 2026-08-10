@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.1                                                    |
+// | analytics plugin 1.1.2                                                    |
 // +---------------------------------------------------------------------------+
 // | admin/index.php                                                           |
 // |                                                                           |
@@ -35,13 +35,11 @@ require_once '../../../lib-common.php';
 require_once '../../auth.inc.php';
 
 if (!SEC_hasRights('analytics.edit')) {
-    $display = COM_siteHeader('menu', $MESSAGE[30]);
-    $display .= COM_startBlock($MESSAGE[30], '', COM_getBlockTemplate('_msg_block', 'header'));
-    $display .= $MESSAGE[36];
-    $display .= COM_endBlock(COM_getBlockTemplate('_msg_block', 'footer'));
-    $display .= COM_siteFooter();
+    $content = COM_startBlock($MESSAGE[30], '', COM_getBlockTemplate('_msg_block', 'header'));
+    $content .= $MESSAGE[36];
+    $content .= COM_endBlock(COM_getBlockTemplate('_msg_block', 'footer'));
     COM_accessLog("User {$_USER['username']} tried to illegally access the analytics administration screen.");
-    echo $display;
+    echo COM_createHTMLDocument($content, array('pagetitle' => $MESSAGE[30]));
     exit;
 }
 
@@ -54,9 +52,9 @@ if (class_exists('config')) {
     $c = config::get_instance();
     $analyticsConfig = $c->get_config('analytics');
     if (is_array($analyticsConfig)) {
-        $client_id = isset($analyticsConfig['client_id']) ? $analyticsConfig['client_id'] : '';
-        $property_id = isset($analyticsConfig['property_id']) ? $analyticsConfig['property_id'] : '';
-        $ga_code = isset($analyticsConfig['ga_code']) ? $analyticsConfig['ga_code'] : '';
+        $client_id = isset($analyticsConfig['client_id']) ? trim($analyticsConfig['client_id']) : '';
+        $property_id = isset($analyticsConfig['property_id']) ? trim($analyticsConfig['property_id']) : '';
+        $ga_code = isset($analyticsConfig['ga_code']) ? trim($analyticsConfig['ga_code']) : '';
     }
 }
 

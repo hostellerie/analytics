@@ -9,9 +9,14 @@ This plugin integrates Google Analytics 4 into your Geeklog website. It provides
 - **KPI Summary**: Quick overview of Yesterday, Last 7 Days, and Last 30 Days traffic.
 
 ## Requirements
+- Geeklog 2.1.1 or higher
+- PHP 5.6 or higher
+- A modern web browser with JavaScript enabled
+- A Google Cloud Project with the Google Analytics Data API enabled
+
+### Recommended Environment
 - Geeklog 2.2.2 or higher
-- PHP 7.4 or higher
-- A Google Cloud Project with the **Google Analytics Data API** enabled.
+- PHP 8.1 or higher
 
 ## Installation
 1. Upload the plugin archive and install it directly from your Geeklog Administration panel under **Plugins** (`admin/plugins.php`).

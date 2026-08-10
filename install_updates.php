@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.1                                                    |
+// | analytics plugin 1.1.2                                                    |
 // +---------------------------------------------------------------------------+
 // | install_updates.php                                                       |
 // |                                                                           |
@@ -64,6 +64,29 @@ function analytics_update_ConfValues_1_1_1()
         
         $c->add('ga_code', $ga_code, 'text', 0, 0, NULL, 10, true, 'analytics', 0);
         $c->add('client_id', $client_id, 'text', 0, 0, NULL, 20, true, 'analytics', 0);
+    }
+
+    return true;
+}
+
+/**
+ * Update Configuration Values for analytics 1.1.2
+ *
+ * @return boolean true on success
+ */
+function analytics_update_ConfValues_1_1_2()
+{
+    global $_CONF;
+    $c = config::get_instance();
+
+    // Ensure previous updates are applied
+    analytics_update_ConfValues_1_1_1();
+
+    if ($c->group_exists('analytics')) {
+        $analyticsConfig = $c->get_config('analytics');
+        if (is_array($analyticsConfig) && !isset($analyticsConfig['property_id'])) {
+            $c->add('property_id', '', 'text', 0, 0, NULL, 15, true, 'analytics', 0);
+        }
     }
 
     return true;
