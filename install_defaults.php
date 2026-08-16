@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.2                                                    |
+// | analytics plugin 1.1.3                                                    |
 // +---------------------------------------------------------------------------+
 // | install_defaults.php                                                      |
 // |                                                                           |
@@ -10,7 +10,7 @@
 // | records. These settings are only used during the initial installation     |
 // | and not referenced any more once the plugin is installed.                 |
 // +---------------------------------------------------------------------------+
-// | Copyright (C) 2008 by the following authors:                              |
+// | Copyright (C) 2008-2026 by the following authors:                              |
 // |                                                                           |
 // | Authors: Dirk Haun        - dirk AT haun-online DOT de                    |
 // |          Ben              - hostellerie.org AT gmail DOT com              |
@@ -32,49 +32,44 @@
 // |                                                                           |
 // +---------------------------------------------------------------------------+
 //
-
 if (strpos(strtolower($_SERVER['PHP_SELF']), 'install_defaults.php') !== false) {
     die('This file can not be used on its own!');
 }
 
-/*
- * Analytics default settings
- */
 global $_CONF, $_PI_CONF;
 
 $_PI_CONF['analytics'] = array(
-    'ga_code'     => '',
+    'ga_code' => '',
     'property_id' => '',
-    'client_id'   => ''
+    'client_id' => '',
+    // Blank = derive from $_CONF['site_url']; * = do not filter by hostname.
+    'hostname' => ''
 );
 
-/**
- * Initialize Geeklog configuration
- */
 function plugin_initconfig_analytics()
 {
-    global $_CONF, $_PI_CONF;
+    global $_PI_CONF;
 
     if (!class_exists('config')) {
         return false;
     }
+
     $c = config::get_instance();
 
-    // Group 'analytics'
     if (!$c->group_exists('analytics')) {
         $c->add('sg_main', NULL, 'subgroup', 0, 0, NULL, 0, true, 'analytics', 0);
         $c->add('tab_main', NULL, 'tab', 0, 0, NULL, 0, true, 'analytics', 0);
         $c->add('fs_main', NULL, 'fieldset', 0, 0, NULL, 0, true, 'analytics', 0);
-        
-        $ga_code = isset($_PI_CONF['analytics']['ga_code']) ? $_PI_CONF['analytics']['ga_code'] : '';
-        $property_id = isset($_PI_CONF['analytics']['property_id']) ? $_PI_CONF['analytics']['property_id'] : '';
-        $client_id = isset($_PI_CONF['analytics']['client_id']) ? $_PI_CONF['analytics']['client_id'] : '';
 
-        $c->add('ga_code', $ga_code, 'text', 0, 0, NULL, 10, true, 'analytics', 0);
-        $c->add('property_id', $property_id, 'text', 0, 0, NULL, 15, true, 'analytics', 0);
-        $c->add('client_id', $client_id, 'text', 0, 0, NULL, 20, true, 'analytics', 0);
+        $c->add('ga_code', $_PI_CONF['analytics']['ga_code'], 'text', 0, 0, NULL, 10, true, 'analytics', 0);
+        $c->add('property_id', $_PI_CONF['analytics']['property_id'], 'text', 0, 0, NULL, 15, true, 'analytics', 0);
+        $c->add('client_id', $_PI_CONF['analytics']['client_id'], 'text', 0, 0, NULL, 20, true, 'analytics', 0);
+        $c->add('hostname', $_PI_CONF['analytics']['hostname'], 'text', 0, 0, NULL, 25, true, 'analytics', 0);
+
         return true;
     }
+
     return false;
 }
+
 ?>
