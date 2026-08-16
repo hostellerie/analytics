@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.2                                                    |
+// | analytics plugin 1.1.3                                                    |
 // +---------------------------------------------------------------------------+
 // | language/english.php                                                      |
 // |                                                                           |
@@ -31,58 +31,45 @@
 // |                                                                           |
 // +---------------------------------------------------------------------------+
 //
-
-
-// Language for plugin install $LANG_analytics00
 $LANG_analytics00 = array(
-    'install_header'    => 'analytics Plugin Installation',
-    'overview'          => 'The analytics Plugin add the google analytics code in your header template.',
-	'preinstall_check'  => 'analytics has the following requirements:',
-	'geeklog_check'     => 'Geeklog v1.5.0 or greater, version reported is <b>%s</b>.',
-    'php_check'         => 'PHP v4.3.0 or greater, version reported is <b>%s</b>.',
-    'preinstall_confirm' => "For full details on analytics Plugin, please visit <a href=\"https://github.com/Geeklog-Plugins/analytics\" target=\"_blank\">GitHub</a>.",
+    'install_header' => 'analytics Plugin Installation',
+    'overview' => 'The analytics Plugin adds Google Analytics 4 tracking and an administration dashboard.',
+    'preinstall_check' => 'analytics has the following requirements:',
+    'geeklog_check' => 'Geeklog v2.1.1 or greater, version reported is <b>%s</b>.',
+    'php_check' => 'PHP v5.6.0 or greater, version reported is <b>%s</b>.',
+    'preinstall_confirm' => 'For full details on analytics Plugin, please visit <a href="https://github.com/Geeklog-Plugins/analytics" target="_blank">GitHub</a>.'
 );
 
-// Language for plugin users
 $LANG_analytics01 = array(
-    'plugin_name'             => 'Analytics',
+    'plugin_name' => 'Analytics'
 );
 
-// Localization of the Admin Configuration UI
 $LANG_configsections['analytics'] = array(
     'label' => 'Analytics',
     'title' => 'Analytics Configuration'
 );
 
 $LANG_confignames['analytics'] = array(
-    'ga_code'     => 'GA4 Measurement ID (e.g., G-XXXX)',
+    'ga_code' => 'GA4 Measurement ID (e.g., G-XXXX)',
     'property_id' => 'GA4 Property ID (numeric)',
-    'client_id'   => 'Google OAuth Client ID'
+    'client_id' => 'Google OAuth Client ID',
+    'hostname' => 'Hostname filter (blank = auto, * = all hosts)'
 );
 
-$LANG_configsubgroups['analytics'] = array(
-    'sg_main' => 'Main Settings'
-);
-
-$LANG_tab['analytics'] = array(
-    'tab_main'  => 'Analytics Settings'
-);
-
-$LANG_fs['analytics'] = array(
-    'fs_main'   => 'Google Analytics 4'
-);
+$LANG_configsubgroups['analytics'] = array('sg_main' => 'Main Settings');
+$LANG_tab['analytics'] = array('tab_main' => 'Analytics Settings');
+$LANG_fs['analytics'] = array('fs_main' => 'Google Analytics 4');
 
 $LANG_analytics_admin = array(
     'setup_required' => 'Google Analytics - Setup Required',
-    'setup_req_desc' => 'Please configure your <b>GA4 Measurement ID (e.g., G-XXXX)</b> in the Geeklog Configuration to enable website tracking.',
+    'setup_req_desc' => 'Please configure a valid <b>GA4 Measurement ID (e.g., G-XXXX)</b> in the Geeklog Configuration to enable website tracking.',
     'tracking_active' => 'Google Analytics - Tracking Active',
     'tracking_active_desc' => 'Your website is currently being tracked with Measurement ID: <b>%s</b>',
-    'tracking_active_note' => '<i>Note: To view your traffic statistics directly in this dashboard, please configure your <b>GA4 Property ID (numeric)</b> and <b>Google OAuth Client ID</b> in the Geeklog Configuration.</i>',
+    'tracking_active_note' => '<i>To view traffic statistics in this dashboard, configure a valid <b>GA4 Property ID</b> and <b>Google OAuth Client ID</b>.</i>',
     'dashboard_title' => 'Google Analytics 4 Dashboard',
-    'dashboard_desc' => 'To view your site statistics, you must authorize access with your Google account.',
+    'dashboard_desc' => 'Authorize access with your Google account to retrieve fresh site statistics.',
     'auth_button' => 'Authorize Google Analytics Access',
     'refresh_button' => 'Refresh Data (Google Auth)',
-    'traffic_overview' => 'Traffic Overview',
     'data_wait' => 'Data will appear here after authorization...',
     'loading_data' => 'Loading data from GA4 API...',
     'stats_yesterday' => 'Yesterday',
@@ -92,59 +79,25 @@ $LANG_analytics_admin = array(
     'metric_views' => 'Page Views',
     'cached_data_note' => 'Data is currently loaded from your local browser cache.',
     'cached_date' => 'Last updated: %s',
-    'last_30_days' => 'Last 30 Days',
-    'active_users' => 'Active Users:',
-    'page_views' => 'Page Views:',
-    'demo_note' => 'Note: This is a basic demo of the GA4 Data API. A full dashboard would include charts.',
     'error' => 'Error:',
-    'request_failed' => 'Request failed:',
+    'request_failed' => 'Request failed',
+    'dependency_error' => 'Google Identity Services or Chart.js could not be loaded.',
+    'permission_error' => 'Access denied. Check that this Google account has access to the configured GA4 property and that the Analytics Data API is enabled.',
+    'auth_error' => 'Authorization expired or was rejected. Please authorize Google Analytics access again.',
+    'quota_error' => 'The Google Analytics Data API quota has been reached. Please try again later.',
+    'hostname_filter_active' => 'Statistics are filtered for hostname: <strong>%s</strong>.',
+    'hostname_filter_disabled' => 'Hostname filtering is disabled. Statistics cover the complete GA4 property.',
     'manual_html' => '
 <hr>
-<details style="margin-top: 40px; padding: 20px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-    <summary style="font-size: 1.3em; font-weight: 600; cursor: pointer; color: #4285F4; outline: none; padding: 5px 0;">Viewing Google Analytics Data in the Plugin (Click to expand)</summary>
-    <div style="margin-top: 20px; color: #444; line-height: 1.6;">
-    <p>To view Google Analytics statistics directly from the Analytics plugin administration page, you must configure both GA4 tracking and API access.</p>
-
-    <h3 style="color: #222; margin-top: 25px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">1. Configure the GA4 Measurement ID</h3>
-    <p>Enter your GA4 Measurement ID in the plugin configuration.</p>
-    <p>Example:<br><code style="background: #eee; padding: 2px 6px; border-radius: 4px;">G-XXXXXXXXXX</code></p>
-    <p>You can find it in <a href="https://analytics.google.com/" target="_blank" style="color: #4285F4; text-decoration: none;">Google Analytics</a> under:<br>
-    <strong>Admin &rarr; Data Streams &rarr; Web &rarr; Measurement ID</strong></p>
-    <p>This ID is used to track visits to your website.</p>
-
-    <h3 style="color: #222; margin-top: 25px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">2. Configure the GA4 Property ID</h3>
-    <p>Enter the numeric Google Analytics Property ID.</p>
-    <p>Example:<br><code style="background: #eee; padding: 2px 6px; border-radius: 4px;">123456789</code></p>
-    <p>Do not use the Measurement ID (<code style="background: #eee; padding: 2px 6px; border-radius: 4px;">G-XXXXXXXXXX</code>) in this field.</p>
-    <p>You can find the Property ID in <a href="https://analytics.google.com/" target="_blank" style="color: #4285F4; text-decoration: none;">Google Analytics</a> under:<br>
-    <strong>Admin &rarr; Property Settings</strong></p>
-
-    <h3 style="color: #222; margin-top: 25px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">3. Configure a Google OAuth Client ID</h3>
-    <p>The plugin uses Google OAuth 2.0 to securely access your Analytics data.</p>
-    <p>Create or use an OAuth 2.0 Client ID in <a href="https://console.cloud.google.com/" target="_blank" style="color: #4285F4; text-decoration: none;">Google Cloud</a> and enter it in the plugin configuration.</p>
-    <p>The Google Analytics Data API must also be enabled for the associated Google Cloud project.</p>
-
-    <h3 style="color: #222; margin-top: 25px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">4. Make Sure Your Google Account Has Access</h3>
-    <p>The Google account used to authorize the plugin must have access to the corresponding GA4 property.</p>
-    <p>In Google Analytics, go to:<br>
-    <strong>Admin &rarr; Property Access Management</strong></p>
-    <p>Make sure your Google account has at least the <strong>Viewer</strong> role.</p>
-
-    <h3 style="color: #222; margin-top: 25px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">5. Authorize Access</h3>
-    <p>Open the Analytics plugin administration page and click:<br>
-    <strong>Authorize Google Analytics Access</strong> (or Refresh Data)</p>
-    <p>Select the Google account that has access to the GA4 property.</p>
-    <p>After authorization, the plugin can retrieve your Analytics statistics using the Google Analytics Data API.</p>
-
-    <div style="margin-top: 30px; padding: 15px; border-left: 4px solid #EA4335; background: #fdf5f5; border-radius: 0 4px 4px 0;">
-        <h3 style="color: #EA4335; margin-top: 0;">Important</h3>
-        <p>The <strong>Measurement ID</strong> and <strong>Property ID</strong> must belong to the same GA4 property.</p>
-        <p>If you see:<br>
-        <code style="background: #fff; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 5px; margin-bottom: 5px;">User does not have sufficient permissions for this property</code><br>
-        check that you authorized the plugin with the correct Google account and that this account has access to the configured GA4 property.</p>
-    </div>
-    </div>
-</details>
-'
+<details style="margin-top:30px;padding:18px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;">
+<summary style="font-size:1.15em;font-weight:600;cursor:pointer;">Google Analytics dashboard setup</summary>
+<div style="margin-top:18px;line-height:1.6;">
+<p>Configure the GA4 Measurement ID, numeric Property ID and Google OAuth Client ID in the Analytics configuration.</p>
+<p><strong>Hostname filter:</strong> leave this field blank to automatically use the hostname from Geeklog <code>site_url</code>. Enter a hostname to force a specific site, or enter <code>*</code> to display statistics for the complete GA4 property.</p>
+<p>The Google account used for authorization needs at least Viewer access to the GA4 property, and the Google Analytics Data API must be enabled in the associated Google Cloud project.</p>
+<p>The dashboard uses completed days only: yesterday, the previous 7 completed days, and the previous 30 completed days. Active user KPIs are requested directly for each complete period and are not calculated by adding daily users.</p>
+</div>
+</details>'
 );
+
 ?>
