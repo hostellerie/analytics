@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.2                                                    |
+// | analytics plugin 1.1.3                                                    |
 // +---------------------------------------------------------------------------+
 // | autoinstall.php                                                           |
 // |                                                                           |
@@ -30,99 +30,51 @@
 // |                                                                           |
 // +---------------------------------------------------------------------------+
 //
-
-/**
-* Autoinstall API functions for the analytics plugin
-*
-* @package analytics
-*/
-
-/**
-* Plugin autoinstall function
-*
-* @param    string  $pi_name    Plugin name
-* @return   array               Plugin information
-*
-*/
 function plugin_autoinstall_analytics($pi_name)
 {
-    $pi_name         = 'analytics';
+    $pi_name = 'analytics';
     $pi_display_name = 'analytics';
-    $pi_admin        = $pi_display_name . ' Admin';
+    $pi_admin = $pi_display_name . ' Admin';
 
-    $info = array(
-        'pi_name'         => $pi_name,
-        'pi_display_name' => $pi_display_name,
-        'pi_version'      => '1.1.2',
-        'pi_gl_version'   => '2.1.1',
-        'pi_homepage'     => 'https://github.com/Geeklog-Plugins/analytics'
+    return array(
+        'info' => array(
+            'pi_name' => $pi_name,
+            'pi_display_name' => $pi_display_name,
+            'pi_version' => '1.1.3',
+            'pi_gl_version' => '2.1.1',
+            'pi_homepage' => 'https://github.com/Geeklog-Plugins/analytics'
+        ),
+        'groups' => array(
+            $pi_admin => 'Has full access to ' . $pi_display_name . ' features'
+        ),
+        'features' => array(
+            $pi_name . '.edit' => 'Access to ' . $pi_name . ' editor',
+            'config.' . $pi_name . '.tab_main' => 'Access to configure general ' . $pi_name . ' settings'
+        ),
+        'mappings' => array(
+            $pi_name . '.edit' => array($pi_admin),
+            'config.' . $pi_name . '.tab_main' => array($pi_admin)
+        ),
+        'tables' => array()
     );
-
-    $groups = array(
-        $pi_admin => 'Has full access to ' . $pi_display_name . ' features'
-    );
-
-    $features = array(
-        $pi_name . '.edit' => 'Access to ' . $pi_name . ' editor',
-        'config.' . $pi_name . '.tab_main' => 'Access to configure general ' . $pi_name . ' settings'
-    );
-
-    $mappings = array(
-        $pi_name . '.edit' => array($pi_admin),
-        'config.' . $pi_name . '.tab_main' => array($pi_admin)
-    );
-
-    // No tables for analytics anymore, configuration is handled natively
-    $tables = array();
-
-    $inst_parms = array(
-        'info'      => $info,
-        'groups'    => $groups,
-        'features'  => $features,
-        'mappings'  => $mappings,
-        'tables'    => $tables
-    );
-
-    return $inst_parms;
 }
 
-/**
-* Load plugin configuration from database
-*
-* @param    string  $pi_name    Plugin name
-* @return   boolean             true on success, otherwise false
-* @see      plugin_initconfig_analytics
-*
-*/
 function plugin_load_configuration_analytics($pi_name)
 {
     global $_CONF;
 
-    $base_path = $_CONF['path'] . 'plugins/' . $pi_name . '/';
-
-    require_once $base_path . 'install_defaults.php';
+    require_once $_CONF['path'] . 'plugins/' . $pi_name . '/install_defaults.php';
 
     return plugin_initconfig_analytics();
 }
 
-/**
-* Check if the plugin is compatible with this Geeklog version
-*
-* @param    string  $pi_name    Plugin name
-* @return   boolean             true: plugin compatible; false: not compatible
-*
-*/
 function plugin_compatible_with_this_version_analytics($pi_name)
 {
-    if (!function_exists('SEC_createToken')) {
+    if (version_compare(PHP_VERSION, '5.6.0', '<')) {
         return false;
     }
 
-    if (!class_exists('config')) {
-        return false;
-    }
-
-    if (!function_exists('COM_createHTMLDocument')) {
+    if (!function_exists('SEC_createToken') || !class_exists('config') || !function_exists('COM_createHTMLDocument')) {
         return false;
     }
 
