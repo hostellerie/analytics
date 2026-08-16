@@ -2,15 +2,15 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.2                                                    |
+// | analytics plugin 1.1.3                                                    |
 // +---------------------------------------------------------------------------+
 // | functions.inc                                                             |
 // |                                                                           |
 // | This file does two things: 1) it implements the necessary Geeklog Plugin  |
-// | API method and 2) implements all the common code needed by the analytics     |
+// | API method and 2) implements all the common code needed by the analytics  |
 // | plugin' PHP files.                                                        |
 // +---------------------------------------------------------------------------+
-// | Copyright (C) 2000-2008 by the following authors:                         |
+// | Copyright (C) 2000-2016 by the following authors:                         |
 // |                                                                           |
 // | Authors: Tony Bibbs       - tony AT tonybibbs DOT com                     |
 // |          Tom Willett      - twillett AT users DOT sourceforge DOT net     |
@@ -35,22 +35,14 @@
 // |                                                                           |
 // +---------------------------------------------------------------------------+
 //
-
-
 if (strpos(strtolower($_SERVER['PHP_SELF']), 'functions.inc') !== false) {
     die('This file can not be used on its own.');
 }
 
-$pi_name    = 'analytics';
-$_AN_CONF['version'] = '1.1.2';
+$pi_name = 'analytics';
+$_AN_CONF['version'] = '1.1.3';
 
-// database table names 
-$_TABLES['analytics']               = $_DB_table_prefix . 'analytics';
-	
-// path to the plugin
 $plugin_path = $_CONF['path'] . 'plugins/analytics/';
-
-// Set lang file or english by default
 $langfile = $plugin_path . 'language/' . $_CONF['language'] . '.php';
 
 if (file_exists($langfile)) {
@@ -59,185 +51,245 @@ if (file_exists($langfile)) {
     require_once $plugin_path . 'language/english.php';
 }
 
-// Class removed.
+/**
+ * Return a trimmed scalar configuration value.
+ */
+function analytics_trimConfigValue($value)
+{
+    if (is_string($value) || is_numeric($value)) {
+        return trim((string) $value);
+    }
 
-// +---------------------------------------------------------------------------+
-// | Geeklog Plugin API Implementations                                        |
-// +---------------------------------------------------------------------------+
+    return '';
+}
 
+/**
+ * Normalize a GA4 Measurement ID. Returns an empty string when invalid.
+ */
+function analytics_normalizeMeasurementId($value)
+{
+    $value = strtoupper(analytics_trimConfigValue($value));
 
+    if ($value === '' || !preg_match('/^G-[A-Z0-9]+$/', $value)) {
+        return '';
+    }
 
+    return $value;
+}
 
-// Return the current version of code.
-// Used in the Plugin Editor to show the registered version and code version
+/**
+ * Normalize a GA4 Property ID to the numeric identifier only.
+ */
+function analytics_normalizePropertyId($value)
+{
+    $value = analytics_trimConfigValue($value);
+
+    if (stripos($value, 'properties/') === 0) {
+        $value = substr($value, strlen('properties/'));
+    }
+
+    if ($value === '' || !ctype_digit($value)) {
+        return '';
+    }
+
+    return $value;
+}
+
+/**
+ * Normalize a Google OAuth web Client ID. Returns empty when invalid.
+ */
+function analytics_normalizeClientId($value)
+{
+    $value = analytics_trimConfigValue($value);
+
+    if ($value === '' || !preg_match('/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/', $value)) {
+        return '';
+    }
+
+    return $value;
+}
+
+/**
+ * Normalize a hostname. URLs are accepted for convenience.
+ */
+function analytics_normalizeHostname($value)
+{
+    $value = analytics_trimConfigValue($value);
+    if ($value === '') {
+        return '';
+    }
+
+    if ($value === '*') {
+        return '*';
+    }
+
+    if (strpos($value, '://') !== false) {
+        $host = parse_url($value, PHP_URL_HOST);
+    } else {
+        $host = parse_url('//' . $value, PHP_URL_HOST);
+    }
+
+    if ($host === false || $host === null || $host === '') {
+        return '';
+    }
+
+    $host = strtolower(rtrim(trim($host), '.'));
+
+    if (!preg_match('/^[a-z0-9.-]+$/', $host)) {
+        return '';
+    }
+
+    return $host;
+}
+
+/**
+ * Read and normalize all runtime configuration in one place.
+ */
+function analytics_getConfig()
+{
+    global $_CONF;
+
+    $raw = array();
+    if (class_exists('config')) {
+        $c = config::get_instance();
+        $config = $c->get_config('analytics');
+        if (is_array($config)) {
+            $raw = $config;
+        }
+    }
+
+    $gaCode = isset($raw['ga_code']) ? analytics_normalizeMeasurementId($raw['ga_code']) : '';
+    $propertyId = isset($raw['property_id']) ? analytics_normalizePropertyId($raw['property_id']) : '';
+    $clientId = isset($raw['client_id']) ? analytics_normalizeClientId($raw['client_id']) : '';
+    $configuredHostname = isset($raw['hostname']) ? analytics_normalizeHostname($raw['hostname']) : '';
+
+    if ($configuredHostname === '') {
+        $siteUrl = isset($_CONF['site_url']) ? $_CONF['site_url'] : '';
+        $configuredHostname = analytics_normalizeHostname($siteUrl);
+    }
+
+    $hostnameFilterEnabled = ($configuredHostname !== '' && $configuredHostname !== '*');
+    $hostname = $hostnameFilterEnabled ? $configuredHostname : '';
+
+    return array(
+        'ga_code' => $gaCode,
+        'property_id' => $propertyId,
+        'client_id' => $clientId,
+        'hostname' => $hostname,
+        'hostname_filter_enabled' => $hostnameFilterEnabled
+    );
+}
+
+/**
+ * Encode a PHP value for safe insertion in JavaScript source.
+ */
+function analytics_jsonEncode($value)
+{
+    return json_encode($value, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+}
 
 function plugin_chkVersion_analytics()
 {
     global $_AN_CONF;
+
     return $_AN_CONF['version'];
 }
 
-
-// Automatic uninstall function for plugins
-// @return   array
-// This code is automatically uninstalling the plugin.
-// It passes an array to the core code function that removes
-// tables, groups, features and php blocks from the tables.
-// Additionally, this code can perform special actions that cannot be
-// foreseen by the core code (interactions with other plugins for example)
-
-function plugin_autouninstall_analytics ()
+function plugin_autouninstall_analytics()
 {
-    $out = array (
-        /* give the name of the tables, without $_TABLES[] */
+    return array(
         'tables' => array(),
-        /* give the full name of the group, as in the db */
         'groups' => array('analytics Admin'),
-        /* give the full name of the feature, as in the db */
         'features' => array('analytics.edit'),
-        /* give the full name of the block, including 'phpblock_', etc */
+        // Keep the legacy block name here so old installations are cleaned up.
         'php_blocks' => array('phpblock_analytics'),
-        /* give all vars with their name */
-        'vars'=> array()
+        'vars' => array()
     );
-
-    return $out;
 }
-
 
 function plugin_getheadercode_analytics()
 {
-    $current_code = '';
-    if (class_exists('config')) {
-        $c = config::get_instance();
-        $analyticsConfig = $c->get_config('analytics');
-        if (is_array($analyticsConfig) && isset($analyticsConfig['ga_code'])) {
-            $current_code = $analyticsConfig['ga_code'];
-        }
-    }
-    
-    if (empty($current_code)) {
+    $analyticsConfig = analytics_getConfig();
+    $measurementId = $analyticsConfig['ga_code'];
+
+    if ($measurementId === '') {
         return '';
     }
-    
-    /* 
-    $str = LB . '<script type="text/javascript">
-var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
-document.write(unescape("%3Cscript src=\'" + gaJsHost + "google-analytics.com/ga.js\' type=\'text/javascript\'%3E%3C/script%3E"));
-</script>
-<script type="text/javascript">
-try {
-var pageTracker = _gat._getTracker("' . $current_code . '");
-pageTracker._trackPageview();
-} catch(err) {}</script>'. LB;
-    */
-    
-    $str = LB . "<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src=\"https://www.googletagmanager.com/gtag/js?id=" . $current_code . "\"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
 
-  gtag('config', '" . $current_code . "');
-</script>
-" . LB;
+    $measurementIdHtml = htmlspecialchars($measurementId, ENT_QUOTES, 'UTF-8');
+    $measurementIdJs = analytics_jsonEncode($measurementId);
 
-    return $str;
+    return LB . '<!-- Global site tag (gtag.js) - Google Analytics -->' . LB
+        . '<script async src="https://www.googletagmanager.com/gtag/js?id=' . $measurementIdHtml . '"></script>' . LB
+        . '<script>' . LB
+        . '  window.dataLayer = window.dataLayer || [];' . LB
+        . '  function gtag(){dataLayer.push(arguments);}' . LB
+        . '  gtag(\'js\', new Date());' . LB
+        . '  gtag(\'config\', ' . $measurementIdJs . ');' . LB
+        . '</script>' . LB;
 }
 
-function plugin_getadminoption_analytics() {
+function plugin_getadminoption_analytics()
+{
     global $_CONF, $LANG_analytics01;
 
     if (SEC_hasRights('analytics.edit')) {
         return array($LANG_analytics01['plugin_name'], $_CONF['site_admin_url'] . '/plugins/analytics/index.php');
     }
+
+    return false;
 }
 
 function plugin_cclabel_analytics()
 {
     global $_CONF, $LANG_analytics01;
 
-    if (SEC_hasRights ('analytics.edit')) {
-        return array ($LANG_analytics01['plugin_name'],
-                $_CONF['site_admin_url'] . '/plugins/analytics/index.php',
-                plugin_geticon_analytics ());
+    if (SEC_hasRights('analytics.edit')) {
+        return array(
+            $LANG_analytics01['plugin_name'],
+            $_CONF['site_admin_url'] . '/plugins/analytics/index.php',
+            plugin_geticon_analytics()
+        );
     }
 
     return false;
 }
 
-// Returns the URL of the plugin's icon
-// @return   string      URL of the icon
-
-function plugin_geticon_analytics ()
-{
-    global $_CONF;
-    $icon = $_CONF['site_admin_url'] . '/plugins/analytics/images/logo.png';
-    return $icon;
-}
-
-// Get path for the template files.
-//* @param    string  $path   subdirectory within the base template path
-// @return   string          full path to template directory
-
-function analytics_templatePath ($path = '')
+function plugin_geticon_analytics()
 {
     global $_CONF;
 
-    if (empty ($path)) {
-        $layout_path = $_CONF['path_layout'] . $pi_name;
-    } else {
-        $layout_path = $_CONF['path_layout'] . $pi_name .  '/' . $path;
-    }
-
-    if (is_dir ($layout_path)) {
-        $retval = $layout_path;
-    } else {
-        $retval = $_CONF['path'] . 'plugins/' . $pi_name . '/templates';
-        if (!empty ($path)) {
-            $retval .= '/' . $path;
-        }
-    }
-
-    return $retval;
+    return $_CONF['site_admin_url'] . '/plugins/analytics/images/logo.png';
 }
-
-// Update the analytics plugin
-
-// @return   int     Number of message to display (true = generic success msg)
 
 function plugin_upgrade_analytics()
 {
     global $_TABLES, $_CONF, $_AN_CONF, $_DB_table_prefix;
 
-    $currentVersion = DB_getItem($_TABLES['plugins'],'pi_version',"pi_name='analytics'");
-
-    if ( DB_getItem($_TABLES['plugins'],'pi_version',"pi_name='analytics'") == $_AN_CONF['version']) {
+    $currentVersion = DB_getItem($_TABLES['plugins'], 'pi_version', "pi_name='analytics'");
+    if ($currentVersion == $_AN_CONF['version']) {
         return true;
     }
 
-    $old_table = $_DB_table_prefix . 'analytics';
-    
-    // Initialize configuration for the new version
     require_once $_CONF['path'] . 'plugins/analytics/install_updates.php';
-    analytics_update_ConfValues_1_1_2();
-    
-    // Migrate old config to new config system if the table exists
-    $table_exists = DB_query("SHOW TABLES LIKE '{$old_table}'");
-    if (DB_numRows($table_exists) > 0) {
-        $code = DB_getItem($old_table, 'code');
-        if (!empty($code) && class_exists('config')) {
+    analytics_update_ConfValues_1_1_3();
+
+    // Migrate legacy tracking code if the historical table still exists.
+    $oldTable = $_DB_table_prefix . 'analytics';
+    $tableExists = DB_query("SHOW TABLES LIKE '{$oldTable}'");
+    if (DB_numRows($tableExists) > 0) {
+        $code = analytics_trimConfigValue(DB_getItem($oldTable, 'code'));
+        if ($code !== '' && class_exists('config')) {
             $c = config::get_instance();
             if ($c->group_exists('analytics')) {
                 $c->set('ga_code', $code, 'analytics');
             }
         }
-        // Drop the old table
-        DB_query("DROP TABLE {$old_table}");
+        DB_query("DROP TABLE {$oldTable}");
     }
 
     DB_query("UPDATE {$_TABLES['plugins']} SET pi_version='{$_AN_CONF['version']}',pi_homepage='https://github.com/Geeklog-Plugins/analytics',pi_gl_version='2.1.1' WHERE pi_name='analytics' LIMIT 1");
+
     return true;
 }
 

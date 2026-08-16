@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.2                                                    |
+// | analytics plugin 1.1.3                                                    |
 // +---------------------------------------------------------------------------+
 // | admin/index.php                                                           |
 // |                                                                           |
@@ -30,7 +30,6 @@
 // |                                                                           |
 // +---------------------------------------------------------------------------+
 //
-
 require_once '../../../lib-common.php';
 require_once '../../auth.inc.php';
 
@@ -43,312 +42,349 @@ if (!SEC_hasRights('analytics.edit')) {
     exit;
 }
 
-$display = '';
-$client_id = '';
-$property_id = '';
-$ga_code = '';
-
-if (class_exists('config')) {
-    $c = config::get_instance();
-    $analyticsConfig = $c->get_config('analytics');
-    if (is_array($analyticsConfig)) {
-        $client_id = isset($analyticsConfig['client_id']) ? trim($analyticsConfig['client_id']) : '';
-        $property_id = isset($analyticsConfig['property_id']) ? trim($analyticsConfig['property_id']) : '';
-        $ga_code = isset($analyticsConfig['ga_code']) ? trim($analyticsConfig['ga_code']) : '';
-    }
-}
-
-$language_file = $_CONF['path'] . 'plugins/analytics/language/' . $_CONF['language'] . '.php';
-if (file_exists($language_file)) {
-    require_once $language_file;
+$languageFile = $_CONF['path'] . 'plugins/analytics/language/' . $_CONF['language'] . '.php';
+if (file_exists($languageFile)) {
+    require_once $languageFile;
 } else {
     require_once $_CONF['path'] . 'plugins/analytics/language/english.php';
 }
 
-if (empty($ga_code)) {
-    $content = '<h3>' . $LANG_analytics_admin['setup_required'] . '</h3>';
+$analyticsConfig = analytics_getConfig();
+$gaCode = $analyticsConfig['ga_code'];
+$propertyId = $analyticsConfig['property_id'];
+$clientId = $analyticsConfig['client_id'];
+$hostname = $analyticsConfig['hostname'];
+$hostnameFilterEnabled = $analyticsConfig['hostname_filter_enabled'];
+
+$content = '';
+
+if ($gaCode === '') {
+    $content .= '<h3>' . $LANG_analytics_admin['setup_required'] . '</h3>';
     $content .= '<p>' . $LANG_analytics_admin['setup_req_desc'] . '</p>';
-} elseif (empty($client_id) || empty($property_id)) {
-    $content = '<h3>' . $LANG_analytics_admin['tracking_active'] . '</h3>';
-    $content .= '<p>' . sprintf($LANG_analytics_admin['tracking_active_desc'], htmlspecialchars($ga_code)) . '</p>';
+} elseif ($clientId === '' || $propertyId === '') {
+    $content .= '<h3>' . $LANG_analytics_admin['tracking_active'] . '</h3>';
+    $content .= '<p>' . sprintf($LANG_analytics_admin['tracking_active_desc'], htmlspecialchars($gaCode, ENT_QUOTES, 'UTF-8')) . '</p>';
     $content .= '<p>' . $LANG_analytics_admin['tracking_active_note'] . '</p>';
 } else {
-    $content = '
-    <div style="background: #fdfdfd; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eaeaea;">
-        <h2 style="margin-top: 0; color: #333; font-weight: 600;">' . $LANG_analytics_admin['dashboard_title'] . '</h2>
-        <p id="dashboard-desc" style="color: #666; margin-bottom: 25px;">' . $LANG_analytics_admin['dashboard_desc'] . '</p>
-        
-        <div id="cache-info" style="display:none; margin-bottom: 20px; font-size: 0.9em; color: #888; background: #f0f4f8; padding: 10px 15px; border-radius: 6px; border-left: 4px solid #4285F4;">
-            <p style="margin: 0;">' . $LANG_analytics_admin['cached_data_note'] . ' <strong><span id="cache-date-label"></span></strong></p>
+    $filterDescription = $hostnameFilterEnabled
+        ? sprintf($LANG_analytics_admin['hostname_filter_active'], htmlspecialchars($hostname, ENT_QUOTES, 'UTF-8'))
+        : $LANG_analytics_admin['hostname_filter_disabled'];
+
+    $jsClientId = analytics_jsonEncode($clientId);
+    $jsPropertyId = analytics_jsonEncode($propertyId);
+    $jsHostname = analytics_jsonEncode($hostname);
+    $jsFilterEnabled = $hostnameFilterEnabled ? 'true' : 'false';
+
+    $jsStrings = array(
+        'users' => $LANG_analytics_admin['metric_users'],
+        'views' => $LANG_analytics_admin['metric_views'],
+        'loading' => $LANG_analytics_admin['loading_data'],
+        'error' => $LANG_analytics_admin['error'],
+        'requestFailed' => $LANG_analytics_admin['request_failed'],
+        'cachedDate' => $LANG_analytics_admin['cached_date'],
+        'refresh' => $LANG_analytics_admin['refresh_button'],
+        'dependencyError' => $LANG_analytics_admin['dependency_error'],
+        'permissionError' => $LANG_analytics_admin['permission_error'],
+        'authError' => $LANG_analytics_admin['auth_error'],
+        'quotaError' => $LANG_analytics_admin['quota_error']
+    );
+
+    $content .= '
+    <div style="background:#fdfdfd;padding:25px;border-radius:8px;border:1px solid #eaeaea;">
+        <h2 style="margin-top:0;">' . $LANG_analytics_admin['dashboard_title'] . '</h2>
+        <p id="dashboard-desc">' . $LANG_analytics_admin['dashboard_desc'] . '</p>
+        <p style="font-size:0.9em;color:#666;">' . $filterDescription . '</p>
+
+        <div id="cache-info" style="display:none;margin-bottom:20px;font-size:0.9em;background:#f0f4f8;padding:10px 15px;border-radius:6px;">
+            <span>' . $LANG_analytics_admin['cached_data_note'] . ' <strong><span id="cache-date-label"></span></strong></span>
         </div>
 
         <div id="dashboard-section" style="display:none;">
-            
-            <!-- KPI Blocks -->
-            <div style="display: flex; gap: 20px; margin-bottom: 25px;">
-                <div style="flex: 1; padding: 20px; background: #fff; border: 1px solid #eef2f5; border-radius: 8px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-                    <h4 style="margin: 0 0 15px 0; color: #777; font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">' . $LANG_analytics_admin['stats_yesterday'] . '</h4>
-                    <div style="font-size: 28px; font-weight: 700; color: #4285F4; line-height: 1;" id="kpi-y-users">--</div>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px; margin-bottom: 12px;">' . $LANG_analytics_admin['metric_users'] . '</div>
-                    <div style="font-size: 24px; font-weight: 600; color: #34A853; line-height: 1;" id="kpi-y-views">--</div>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px;">' . $LANG_analytics_admin['metric_views'] . '</div>
+            <div style="display:flex;gap:20px;margin-bottom:25px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:180px;padding:20px;background:#fff;border:1px solid #eef2f5;border-radius:8px;text-align:center;">
+                    <h4>' . $LANG_analytics_admin['stats_yesterday'] . '</h4>
+                    <div style="font-size:28px;font-weight:700;" id="kpi-y-users">--</div>
+                    <div style="font-size:12px;">' . $LANG_analytics_admin['metric_users'] . '</div>
+                    <div style="font-size:24px;font-weight:600;margin-top:12px;" id="kpi-y-views">--</div>
+                    <div style="font-size:12px;">' . $LANG_analytics_admin['metric_views'] . '</div>
                 </div>
-                <div style="flex: 1; padding: 20px; background: #fff; border: 1px solid #eef2f5; border-radius: 8px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-                    <h4 style="margin: 0 0 15px 0; color: #777; font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">' . $LANG_analytics_admin['stats_7days'] . '</h4>
-                    <div style="font-size: 28px; font-weight: 700; color: #4285F4; line-height: 1;" id="kpi-7-users">--</div>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px; margin-bottom: 12px;">' . $LANG_analytics_admin['metric_users'] . '</div>
-                    <div style="font-size: 24px; font-weight: 600; color: #34A853; line-height: 1;" id="kpi-7-views">--</div>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px;">' . $LANG_analytics_admin['metric_views'] . '</div>
+                <div style="flex:1;min-width:180px;padding:20px;background:#fff;border:1px solid #eef2f5;border-radius:8px;text-align:center;">
+                    <h4>' . $LANG_analytics_admin['stats_7days'] . '</h4>
+                    <div style="font-size:28px;font-weight:700;" id="kpi-7-users">--</div>
+                    <div style="font-size:12px;">' . $LANG_analytics_admin['metric_users'] . '</div>
+                    <div style="font-size:24px;font-weight:600;margin-top:12px;" id="kpi-7-views">--</div>
+                    <div style="font-size:12px;">' . $LANG_analytics_admin['metric_views'] . '</div>
                 </div>
-                <div style="flex: 1; padding: 20px; background: #fff; border: 1px solid #eef2f5; border-radius: 8px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
-                    <h4 style="margin: 0 0 15px 0; color: #777; font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">' . $LANG_analytics_admin['stats_30days'] . '</h4>
-                    <div style="font-size: 28px; font-weight: 700; color: #4285F4; line-height: 1;" id="kpi-30-users">--</div>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px; margin-bottom: 12px;">' . $LANG_analytics_admin['metric_users'] . '</div>
-                    <div style="font-size: 24px; font-weight: 600; color: #34A853; line-height: 1;" id="kpi-30-views">--</div>
-                    <div style="font-size: 12px; color: #999; margin-top: 4px;">' . $LANG_analytics_admin['metric_views'] . '</div>
+                <div style="flex:1;min-width:180px;padding:20px;background:#fff;border:1px solid #eef2f5;border-radius:8px;text-align:center;">
+                    <h4>' . $LANG_analytics_admin['stats_30days'] . '</h4>
+                    <div style="font-size:28px;font-weight:700;" id="kpi-30-users">--</div>
+                    <div style="font-size:12px;">' . $LANG_analytics_admin['metric_users'] . '</div>
+                    <div style="font-size:24px;font-weight:600;margin-top:12px;" id="kpi-30-views">--</div>
+                    <div style="font-size:12px;">' . $LANG_analytics_admin['metric_views'] . '</div>
                 </div>
             </div>
 
-            <!-- Chart Container -->
-            <div id="chart-container" style="padding: 20px; border: 1px solid #eef2f5; background: #fff; border-radius: 8px; min-height: 350px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+            <div id="chart-container" style="padding:20px;border:1px solid #eef2f5;background:#fff;border-radius:8px;min-height:350px;">
                 <canvas id="ga4Chart"></canvas>
-                <p id="loading-msg" style="text-align:center; color:#666; margin-top: 150px;">' . addslashes($LANG_analytics_admin['data_wait']) . '</p>
+                <p id="loading-msg" style="text-align:center;margin-top:150px;">' . $LANG_analytics_admin['data_wait'] . '</p>
             </div>
         </div>
-        
-        <div id="auth-section" style="margin-top: 25px; text-align: center;">
-            <button id="authorize-btn" style="padding: 12px 24px; background: #4285F4; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 2px 4px rgba(66, 133, 244, 0.3); transition: background 0.2s;">
-                ' . $LANG_analytics_admin['auth_button'] . '
-            </button>
+
+        <div id="auth-section" style="margin-top:25px;text-align:center;">
+            <button id="authorize-btn" type="button" style="padding:12px 24px;cursor:pointer;">' . $LANG_analytics_admin['auth_button'] . '</button>
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" defer></script>
     <script src="https://accounts.google.com/gsi/client" async></script>
     <script>
-        const CLIENT_ID = "' . addslashes($client_id) . '";
-        const PROPERTY_ID = "' . addslashes($property_id) . '";
-        const SCOPES = "https://www.googleapis.com/auth/analytics.readonly";
+    (function () {
+        "use strict";
 
-        let tokenClient;
-        let gaChart = null;
+        var CLIENT_ID = ' . $jsClientId . ';
+        var PROPERTY_ID = ' . $jsPropertyId . ';
+        var HOSTNAME = ' . $jsHostname . ';
+        var FILTER_HOSTNAME = ' . $jsFilterEnabled . ';
+        var STRINGS = ' . analytics_jsonEncode($jsStrings) . ';
+        var SCOPES = "https://www.googleapis.com/auth/analytics.readonly";
+        var tokenClient = null;
+        var gaChart = null;
+        var cacheKeyBase = "analytics_1_1_3_" + PROPERTY_ID + "_" + (FILTER_HOSTNAME ? HOSTNAME : "all");
+        var cacheDataKey = cacheKeyBase + "_data";
+        var cacheTimeKey = cacheKeyBase + "_time";
 
-        function renderDashboard(chartData) {
-            document.getElementById("dashboard-section").style.display = "block";
-            document.getElementById("loading-msg").style.display = "none";
-            
-            // Populate KPIs
-            document.getElementById("kpi-y-users").innerText = chartData.kpi.yesterday.users;
-            document.getElementById("kpi-y-views").innerText = chartData.kpi.yesterday.views;
-            document.getElementById("kpi-7-users").innerText = chartData.kpi.last7.users;
-            document.getElementById("kpi-7-views").innerText = chartData.kpi.last7.views;
-            document.getElementById("kpi-30-users").innerText = chartData.kpi.last30.users;
-            document.getElementById("kpi-30-views").innerText = chartData.kpi.last30.views;
-
-            // Render Chart
-            const ctx = document.getElementById("ga4Chart").getContext("2d");
-            
-            if (gaChart) {
-                gaChart.destroy();
+        function metricValue(report, index) {
+            if (!report || !report.rows || !report.rows.length || !report.rows[0].metricValues || !report.rows[0].metricValues[index]) {
+                return 0;
             }
-            
-            gaChart = new Chart(ctx, {
-                type: "line",
-                data: {
-                    labels: chartData.labels,
-                    datasets: [
-                        {
-                            label: "' . addslashes($LANG_analytics_admin['metric_users']) . '",
-                            data: chartData.users,
-                            borderColor: "#4285F4",
-                            backgroundColor: "rgba(66, 133, 244, 0.1)",
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.3
-                        },
-                        {
-                            label: "' . addslashes($LANG_analytics_admin['metric_views']) . '",
-                            data: chartData.views,
-                            borderColor: "#34A853",
-                            backgroundColor: "transparent",
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            tension: 0.3
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: "index",
-                        intersect: false,
-                    },
-                    plugins: {
-                        legend: { position: "top" }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
-                    }
-                }
-            });
+            return parseInt(report.rows[0].metricValues[index].value, 10) || 0;
         }
 
-        function checkCacheAndInit() {
-            const cachedData = localStorage.getItem("ga4_dashboard_data");
-            const cacheTime = localStorage.getItem("ga4_dashboard_time");
-            
-            if (cachedData && cacheTime) {
-                try {
-                    const parsedData = JSON.parse(cachedData);
-                    const cacheDate = new Date(parseInt(cacheTime));
-                    
-                    // Display cached data immediately
-                    renderDashboard(parsedData);
-                    
-                    // Show cache info and hide description
-                    document.getElementById("cache-info").style.display = "block";
-                    const descEl = document.getElementById("dashboard-desc");
-                    if (descEl) descEl.style.display = "none";
-                    
-                    const dateStr = cacheDate.toLocaleString();
-                    const cacheMsg = "' . addslashes($LANG_analytics_admin['cached_date']) . '";
-                    document.getElementById("cache-date-label").innerText = cacheMsg.replace("%s", dateStr);
-                    
-                    const btn = document.getElementById("authorize-btn");
-                    btn.innerText = "' . addslashes($LANG_analytics_admin['refresh_button']) . '";
-                    btn.style.background = "#fff";
-                    btn.style.color = "#4285F4";
-                    btn.style.border = "1px solid #4285F4";
-                    
-                } catch(e) {
-                    // Invalid cache
-                    localStorage.removeItem("ga4_dashboard_data");
-                }
+        function dimensionFilter() {
+            if (!FILTER_HOSTNAME) {
+                return null;
             }
-            
-            // Initialize GSI
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID,
-                scope: SCOPES,
-                callback: (tokenResponse) => {
-                    if (tokenResponse && tokenResponse.access_token) {
-                        document.getElementById("auth-section").style.display = "none";
-                        document.getElementById("cache-info").style.display = "none";
-                        document.getElementById("dashboard-section").style.display = "block";
-                        document.getElementById("loading-msg").innerText = "' . addslashes($LANG_analytics_admin['loading_data']) . '";
-                        document.getElementById("loading-msg").style.display = "block";
-                        
-                        // Hide chart canvas while loading new data
-                        if(gaChart) gaChart.destroy();
-                        
-                        fetchAnalyticsData(tokenResponse.access_token);
+            return {
+                filter: {
+                    fieldName: "hostName",
+                    stringFilter: {
+                        matchType: "EXACT",
+                        value: HOSTNAME,
+                        caseSensitive: false
                     }
-                },
-            });
-            
-            document.getElementById("authorize-btn").addEventListener("click", () => {
-                tokenClient.requestAccessToken();
-            });
-        }
-        
-        window.onload = function() {
-            // Wait for Chart.js and GSI to be available
-            var depsCheck = setInterval(function() {
-                if (typeof google !== "undefined" && google.accounts && typeof Chart !== "undefined") {
-                    clearInterval(depsCheck);
-                    checkCacheAndInit();
                 }
-            }, 100);
-        };
+            };
+        }
 
-        function fetchAnalyticsData(token) {
-            let formattedProperty = PROPERTY_ID.startsWith("properties/") ? PROPERTY_ID : "properties/" + PROPERTY_ID;
+        function reportBody(startDate, endDate, withDateDimension) {
+            var body = {
+                dateRanges: [{ startDate: startDate, endDate: endDate }],
+                metrics: [{ name: "activeUsers" }, { name: "screenPageViews" }]
+            };
 
-            fetch("https://analyticsdata.googleapis.com/v1beta/" + formattedProperty + ":runReport", {
+            if (withDateDimension) {
+                body.dimensions = [{ name: "date" }];
+                body.orderBys = [{ dimension: { dimensionName: "date" } }];
+            }
+
+            var filter = dimensionFilter();
+            if (filter) {
+                // Request hostName as a dimension as well as filtering on it.
+                // This follows the Data API requirement that filtered dimensions
+                // are part of the requested dimensions.
+                if (!body.dimensions) {
+                    body.dimensions = [];
+                }
+                body.dimensions.push({ name: "hostName" });
+                body.dimensionFilter = filter;
+            }
+
+            return body;
+        }
+
+        function friendlyApiError(status, message) {
+            if (status === 401) {
+                return STRINGS.authError;
+            }
+            if (status === 403) {
+                return STRINGS.permissionError;
+            }
+            if (status === 429) {
+                return STRINGS.quotaError;
+            }
+            return (message || STRINGS.requestFailed) + " (HTTP " + status + ")";
+        }
+
+        function runReport(token, body) {
+            var url = "https://analyticsdata.googleapis.com/v1beta/properties/" + encodeURIComponent(PROPERTY_ID) + ":runReport";
+
+            return fetch(url, {
                 method: "POST",
                 headers: {
                     "Authorization": "Bearer " + token,
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({
-                    "dateRanges": [{ "startDate": "30daysAgo", "endDate": "today" }],
-                    "dimensions": [{ "name": "date" }],
-                    "metrics": [{ "name": "activeUsers" }, { "name": "screenPageViews" }],
-                    "orderBys": [{ "dimension": { "dimensionName": "date" } }]
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    document.getElementById("loading-msg").innerHTML = "<span style=\"color:red;\">' . addslashes($LANG_analytics_admin['error']) . ' " + data.error.message + "</span>";
-                    return;
-                }
-                
-                let processedData = {
-                    labels: [],
-                    users: [],
-                    views: [],
-                    kpi: {
-                        yesterday: { users: 0, views: 0 },
-                        last7: { users: 0, views: 0 },
-                        last30: { users: 0, views: 0 }
+                body: JSON.stringify(body)
+            }).then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (data) {
+                    if (!response.ok || data.error) {
+                        var apiMessage = data && data.error && data.error.message ? data.error.message : "";
+                        throw new Error(friendlyApiError(response.status, apiMessage));
                     }
-                };
-                
-                if (data.rows && data.rows.length > 0) {
-                    // Sort rows by date just in case API returns out of order
-                    data.rows.sort((a,b) => a.dimensionValues[0].value.localeCompare(b.dimensionValues[0].value));
-                    
-                    const totalDays = data.rows.length;
-                    
-                    data.rows.forEach((row, index) => {
-                        // Parse YYYYMMDD
-                        let dateStr = row.dimensionValues[0].value;
-                        let formattedDate = dateStr.substring(6,8) + "/" + dateStr.substring(4,6);
-                        
-                        let u = parseInt(row.metricValues[0].value) || 0;
-                        let v = parseInt(row.metricValues[1].value) || 0;
-                        
-                        processedData.labels.push(formattedDate);
-                        processedData.users.push(u);
-                        processedData.views.push(v);
-                        
-                        // KPIs
-                        processedData.kpi.last30.users += u;
-                        processedData.kpi.last30.views += v;
-                        
-                        if (index >= totalDays - 7) {
-                            processedData.kpi.last7.users += u;
-                            processedData.kpi.last7.views += v;
-                        }
-                        
-                        // Yesterday (assuming last row is today, yesterday is totalDays - 2)
-                        // Note: Depending on timezone, "today" might have very little data. GA4 API standardizes this.
-                        if (index === totalDays - 2) {
-                            processedData.kpi.yesterday.users += u;
-                            processedData.kpi.yesterday.views += v;
-                        }
-                    });
-                }
-                
-                // Cache data
-                localStorage.setItem("ga4_dashboard_data", JSON.stringify(processedData));
-                localStorage.setItem("ga4_dashboard_time", Date.now().toString());
-                
-                renderDashboard(processedData);
-            })
-            .catch(error => {
-                document.getElementById("loading-msg").innerHTML = "<span style=\"color:red;\">' . addslashes($LANG_analytics_admin['request_failed']) . ' " + error + "</span>";
+                    return data;
+                });
             });
         }
-    </script>
-    ';
+
+        function buildProcessedData(chartReport, yesterdayReport, last7Report, last30Report) {
+            var processed = {
+                labels: [],
+                users: [],
+                views: [],
+                kpi: {
+                    yesterday: { users: metricValue(yesterdayReport, 0), views: metricValue(yesterdayReport, 1) },
+                    last7: { users: metricValue(last7Report, 0), views: metricValue(last7Report, 1) },
+                    last30: { users: metricValue(last30Report, 0), views: metricValue(last30Report, 1) }
+                }
+            };
+
+            if (chartReport && chartReport.rows) {
+                chartReport.rows.sort(function (a, b) {
+                    return a.dimensionValues[0].value.localeCompare(b.dimensionValues[0].value);
+                });
+
+                chartReport.rows.forEach(function (row) {
+                    var dateStr = row.dimensionValues[0].value;
+                    processed.labels.push(dateStr.substring(6, 8) + "/" + dateStr.substring(4, 6));
+                    processed.users.push(parseInt(row.metricValues[0].value, 10) || 0);
+                    processed.views.push(parseInt(row.metricValues[1].value, 10) || 0);
+                });
+            }
+
+            return processed;
+        }
+
+        function renderDashboard(chartData) {
+            document.getElementById("dashboard-section").style.display = "block";
+            document.getElementById("loading-msg").style.display = "none";
+            document.getElementById("kpi-y-users").textContent = chartData.kpi.yesterday.users;
+            document.getElementById("kpi-y-views").textContent = chartData.kpi.yesterday.views;
+            document.getElementById("kpi-7-users").textContent = chartData.kpi.last7.users;
+            document.getElementById("kpi-7-views").textContent = chartData.kpi.last7.views;
+            document.getElementById("kpi-30-users").textContent = chartData.kpi.last30.users;
+            document.getElementById("kpi-30-views").textContent = chartData.kpi.last30.views;
+
+            var ctx = document.getElementById("ga4Chart").getContext("2d");
+            if (gaChart) {
+                gaChart.destroy();
+            }
+
+            gaChart = new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        { label: STRINGS.users, data: chartData.users, borderWidth: 2, fill: false, tension: 0.3 },
+                        { label: STRINGS.views, data: chartData.views, borderWidth: 2, fill: false, tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: "index", intersect: false },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function showError(error) {
+            var loading = document.getElementById("loading-msg");
+            loading.style.display = "block";
+            loading.textContent = STRINGS.error + " " + (error && error.message ? error.message : error);
+            document.getElementById("auth-section").style.display = "block";
+        }
+
+        function fetchAnalyticsData(token) {
+            document.getElementById("dashboard-section").style.display = "block";
+            document.getElementById("loading-msg").textContent = STRINGS.loading;
+            document.getElementById("loading-msg").style.display = "block";
+            document.getElementById("cache-info").style.display = "none";
+
+            Promise.all([
+                runReport(token, reportBody("30daysAgo", "yesterday", true)),
+                runReport(token, reportBody("yesterday", "yesterday", false)),
+                runReport(token, reportBody("7daysAgo", "yesterday", false)),
+                runReport(token, reportBody("30daysAgo", "yesterday", false))
+            ]).then(function (reports) {
+                var processed = buildProcessedData(reports[0], reports[1], reports[2], reports[3]);
+                localStorage.setItem(cacheDataKey, JSON.stringify(processed));
+                localStorage.setItem(cacheTimeKey, String(Date.now()));
+                renderDashboard(processed);
+                document.getElementById("auth-section").style.display = "block";
+                document.getElementById("authorize-btn").textContent = STRINGS.refresh;
+            }).catch(showError);
+        }
+
+        function loadCache() {
+            var cachedData = localStorage.getItem(cacheDataKey);
+            var cacheTime = localStorage.getItem(cacheTimeKey);
+
+            if (!cachedData || !cacheTime) {
+                return;
+            }
+
+            try {
+                var parsedData = JSON.parse(cachedData);
+                renderDashboard(parsedData);
+                document.getElementById("cache-info").style.display = "block";
+                document.getElementById("cache-date-label").textContent = STRINGS.cachedDate.replace("%s", new Date(parseInt(cacheTime, 10)).toLocaleString());
+                document.getElementById("authorize-btn").textContent = STRINGS.refresh;
+            } catch (e) {
+                localStorage.removeItem(cacheDataKey);
+                localStorage.removeItem(cacheTimeKey);
+            }
+        }
+
+        function initDashboard() {
+            loadCache();
+
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: function (tokenResponse) {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        fetchAnalyticsData(tokenResponse.access_token);
+                    }
+                }
+            });
+
+            document.getElementById("authorize-btn").addEventListener("click", function () {
+                tokenClient.requestAccessToken();
+            });
+        }
+
+        window.addEventListener("load", function () {
+            var attempts = 0;
+            var dependencyCheck = window.setInterval(function () {
+                attempts += 1;
+                if (typeof google !== "undefined" && google.accounts && google.accounts.oauth2 && typeof Chart !== "undefined") {
+                    window.clearInterval(dependencyCheck);
+                    initDashboard();
+                    return;
+                }
+
+                if (attempts >= 150) {
+                    window.clearInterval(dependencyCheck);
+                    showError(new Error(STRINGS.dependencyError));
+                }
+            }, 100);
+        });
+    }());
+    </script>';
 }
 
 $content .= $LANG_analytics_admin['manual_html'];
 
-$display .= COM_createHTMLDocument($content, array('pagetitle' => $LANG_analytics_admin['dashboard_title']));
-echo $display;
+echo COM_createHTMLDocument($content, array('pagetitle' => $LANG_analytics_admin['dashboard_title']));
 
 ?>

@@ -2,7 +2,7 @@
 
 /* Reminder: always indent with 4 spaces (no tabs). */
 // +---------------------------------------------------------------------------+
-// | analytics plugin 1.1.2                                                    |
+// | analytics plugin 1.1.3                                                    |
 // +---------------------------------------------------------------------------+
 // | configuration_validation.php                                              |
 // |                                                                           |
@@ -30,17 +30,18 @@
 // |                                                                           |
 // +---------------------------------------------------------------------------+
 //
-
 if (stripos($_SERVER['PHP_SELF'], basename(__FILE__)) !== false) {
     die('This file can not be used on its own!');
 }
 
-// Analytics Settings
-// Both ga_code and client_id are strings, so we don't strictly need 
-// numeric/boolean validation, but this file is provided for completeness
-// and future extensibility.
+global $_CONF_VALIDATE;
 
-// Example of how we might validate ga_code if we wanted to enforce a pattern:
-// $_CONF_VALIDATE['analytics']['ga_code'] = array('rule' => 'notEmpty');
+// Runtime normalization in functions.inc performs the strict GA4-specific
+// validation. These rules prevent non-scalar configuration values while
+// remaining compatible with Geeklog 2.1.1.
+$_CONF_VALIDATE['analytics']['ga_code'] = array('rule' => 'stringOrEmpty');
+$_CONF_VALIDATE['analytics']['property_id'] = array('rule' => 'stringOrEmpty');
+$_CONF_VALIDATE['analytics']['client_id'] = array('rule' => 'stringOrEmpty');
+$_CONF_VALIDATE['analytics']['hostname'] = array('rule' => 'stringOrEmpty');
 
 ?>

@@ -1,6 +1,2 @@
-This directory contains the language files for the Analytics plugin.
-The plugin will pick the appropriate language file automatically based on the
-current configuration or the user's language setting.
-
-If there is no language file for the requested language, the plugin will revert
-to English.
+Language files for the Geeklog Analytics plugin.
+English is included as the fallback language.
